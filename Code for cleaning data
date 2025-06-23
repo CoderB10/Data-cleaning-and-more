@@ -1,0 +1,229 @@
+
+
+#Tasks at hand:
+    #1 Remove duplicates 
+    #2 Standardize the data 
+    #3 Treat null values or blank values 
+    #4 Remove rows and columns with no use
+
+# Before the codes: Uploaded a csv file in a new database with named data_cleaning.
+use data_cleaning;
+
+select *
+from layoffs;
+create table unique_users as
+with ranking as (select *, row_number() over(partition by company, location, industry, total_laid_off, percentage_laid_off, 'date', stage, country, funds_raised_millions) as num_rows
+from layoffs)
+select * from ranking where num_rows <= 1;    #deleted repeated rows in the table using a rank column(named as num_rows) as a metric for repeated rows
+
+CREATE TABLE data_cleaning.layoffs_staging 
+LIKE data_cleaning.unique_users;			 #another table with only unique rows/entries
+
+INSERT layoffs_staging 
+SELECT * FROM data_cleaning.unique_users;
+
+
+alter table layoffs_staging
+drop column num_rows;                       #delete rank column to save up space for upcoming queries
+
+select* from layoffs_staging;
+
+#standardizing data
+
+select company, trim(company)
+from layoffs_staging;
+update layoffs_staging
+set company =trim(company); 		   #regular spacing
+
+select distinct industry
+from layoffs_staging
+order by 1;
+
+select *
+from layoffs_staging
+where industry like 'Crypto%';		  
+
+update layoffs_staging
+set industry = 'Crypto'
+where industry like 'Crypto%';       #Uniform mentions for same industry with different spelling or punctuation errors
+
+select distinct location
+from layoffs_staging;
+
+select distinct country
+from layoffs_staging
+order by 1;
+
+update layoffs_staging
+set country = 'United States'
+where country like '%States.';		#Uniform mentions for same country with different spelling or punctuation errors
+
+select distinct country, trim(trailing '.' from country) as trimmed
+from layoffs_staging
+order by 1;
+
+select date, str_to_date(date, '%m/%d/%Y') as date1
+from layoffs_staging;				
+
+update layoffs_staging
+set date = str_to_date(date, '%m/%d/%Y');  #convert date column from string data type to datetime format
+
+select *
+from layoffs_staging;
+
+alter table layoffs_staging
+modify column date date;
+
+select* 
+from layoffs_staging;
+
+#work with blank values
+select * 
+from layoffs_staging
+where total_laid_off is null
+and percentage_laid_off is null;		#find entries with null values in focus columns, here laidoff ones
+
+
+select distinct industry
+from layoffs_staging;
+
+select *
+from layoffs_staging
+where industry is null
+or industry = '';
+
+select * 
+from layoffs_staging
+where company like 'Bally%';
+
+select st1.industry, st2.industry
+from layoffs_staging st1
+join layoffs_staging st2
+on st1.company = st2.company
+and st1.location = st2.location
+where (st1.industry is null or st1.industry = '')
+and st2.industry is not null;						#find missing values on industry with same location and companies
+
+update layoffs_staging st1
+join  layoffs_staging st2
+on st1.company = st2.company
+and st1.location = st2.location
+set st1.industry = st2.industry						#replace missing values on industry with appropriate values from same location and company
+where (st1.industry is null or st1.industry = '')
+and st2.industry is not null;
+
+update layoffs_staging 
+set industry = null
+where industry = ''; 
+
+update layoffs_staging st1
+join  layoffs_staging st2
+on st1.company = st2.company
+set st1.industry = st2.industry
+where (st1.industry is null or st1.industry = '')
+and st2.industry is not null;
+
+select * from layoffs_staging st1
+join layoffs_staging st2
+on st1.company = st2.company; 
+
+
+select * 
+from layoffs_staging 
+where total_laid_off is null
+and percentage_laid_off is null;
+
+delete from layoffs_staging 
+where total_laid_off is null
+and percentage_laid_off is null;       #remove entries with null values at the focus of table, i.e. metrics of layoffs
+
+select * 
+from layoffs_staging
+where total_laid_off is null
+and percentage_laid_off is null;
+
+#Finding metrics based on different attributes
+
+
+select year(date), sum(total_laid_off)
+from layoffs_staging
+group by year(date)
+order by 1 desc;
+
+select stage, sum(total_laid_off)
+from layoffs_staging
+group by stage
+order by 2 desc;
+
+select company, sum(total_laid_off)
+from layoffs_staging
+group by company
+order by 1;
+
+select company, sum(percentage_laid_off)
+from layoffs_staging
+group by company
+order by 2 desc;
+
+
+select *
+from layoffs_staging;
+
+select substring(date, 6,2) as month, sum(total_laid_off)  #taking month part out of date when the column is string type
+from layoffs_staging
+group by month; 
+
+select substring(date, 1,7) as month, sum(total_laid_off) 
+from layoffs_staging
+where substring(date, 1,7) is not null    #we can't use asterisk here due to metric needs
+group by month
+order by 1; 
+
+with rolling_total as (
+select substring(date, 1,7) as month, sum(total_laid_off)  as total_off
+from layoffs_staging
+where substring(date, 1,7) is not null  
+group by month
+order by 1
+)
+select month, total_off, sum(total_off) over(order by month) as rolling_total
+from rolling_total;
+
+
+# above query gives the measures of how layoffs increased or decreased through each year or over the years.
+
+select company, year(date), sum(total_laid_off)
+from layoffs_staging
+group by company, year(date)
+order by company;
+#gives the measure of people laid of in increasing order from each company at a given year
+
+select company, year(date), sum(total_laid_off)
+from layoffs_staging
+group by company, year(date)
+order by 3 desc;
+
+with company_year ( company, years, total_laid_off) as (
+select company, year(date), sum(total_laid_off)
+from layoffs_staging
+group by company, year(date)
+)
+select*, dense_rank() over(partition by years order by total_laid_off desc) as ranking
+from company_year
+where years is not null
+order by ranking;
+
+#sorted the companies based on highest laid off employees in any year
+
+with company_year ( company, years, total_laid_off) as (
+select company, year(date), sum(total_laid_off)
+from layoffs_staging
+group by company, year(date)
+), Company_year_rank as 
+(select*, dense_rank() over(partition by years order by total_laid_off desc) as ranking
+from company_year
+where years is not null)
+select * from Company_year_rank
+where ranking <=5;
+
+#retreived data of top 5 company in terms of employees laid off by each year
