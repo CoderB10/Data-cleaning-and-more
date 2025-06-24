@@ -1,4 +1,4 @@
-
+#DATA CLEANING
 #Tasks at hand:
     #1 Remove duplicates 
     #2 Standardize the data 
@@ -6,7 +6,7 @@
     #4 Remove rows and columns with no use
 
 # Before the codes: Uploaded a csv file in a new database with named data_cleaning.
-use data_cleaning;
+use data_cleaning;  
 
 select *
 from layoffs;
@@ -141,28 +141,27 @@ from layoffs_staging
 where total_laid_off is null
 and percentage_laid_off is null;
 
-#Finding metrics based on different attributes
-
+#EXPLORATORY DATA ANALYSIS
 
 select year(date), sum(total_laid_off)
 from layoffs_staging
 group by year(date)
-order by 1 desc;
+order by 1 desc;                      #find amount of laid off employees each year with highest to lowest by year
 
 select stage, sum(total_laid_off)
 from layoffs_staging
 group by stage
-order by 2 desc;
+order by 2 desc;                     #find laid off employees at the funding stage of companies 
 
 select company, sum(total_laid_off)
 from layoffs_staging
 group by company
-order by 1;
+order by 1;                         #find amount of laid off employees by each company in from highest to lowest 
 
 select company, sum(percentage_laid_off)
 from layoffs_staging
 group by company
-order by 2 desc;
+order by 2 desc;                   #find percentage of laid off employees by each company in from highest to lowest 
 
 
 select *
@@ -174,7 +173,7 @@ group by month;
 
 select substring(date, 1,7) as month, sum(total_laid_off) 
 from layoffs_staging
-where substring(date, 1,7) is not null    #we can't use asterisk here due to metric needs
+where substring(date, 1,7) is not null    #we can't use alias here due to functions present
 group by month
 order by 1; 
 
