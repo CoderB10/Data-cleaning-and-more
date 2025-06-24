@@ -4,7 +4,7 @@ Snippet of data taken for cleaning and analysis
 ![snippet](https://github.com/user-attachments/assets/6f88e493-a5c2-414a-9041-b29e8758d2a0)
 
 
-Te project has two stages:
+The project has two stages:
 1. DATA CLEANING
 2. EXPLORATORY DATA ANALYSIS
 
