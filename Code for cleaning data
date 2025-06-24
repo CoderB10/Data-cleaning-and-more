@@ -120,7 +120,7 @@ join  layoffs_staging st2
 on st1.company = st2.company
 set st1.industry = st2.industry
 where (st1.industry is null or st1.industry = '')
-and st2.industry is not null;
+and st2.industry is not null;                      #same operation as above after replacing blank spaces with null in industry column
 
 select * from layoffs_staging st1
 join layoffs_staging st2
@@ -134,7 +134,7 @@ and percentage_laid_off is null;
 
 delete from layoffs_staging 
 where total_laid_off is null
-and percentage_laid_off is null;       #remove entries with null values at the focus of table, i.e. metrics of layoffs
+and percentage_laid_off is null;                   #remove entries with null values at the focus of table, i.e. metrics of layoffs
 
 select * 
 from layoffs_staging
@@ -146,22 +146,22 @@ and percentage_laid_off is null;
 select year(date), sum(total_laid_off)
 from layoffs_staging
 group by year(date)
-order by 1 desc;                      #find amount of laid off employees each year with highest to lowest by year
+order by 1 desc;                                  #find amount of laid off employees each year with highest to lowest by year
 
 select stage, sum(total_laid_off)
 from layoffs_staging
 group by stage
-order by 2 desc;                     #find laid off employees at the funding stage of companies 
+order by 2 desc;                                  #find laid off employees at the funding stage of companies 
 
 select company, sum(total_laid_off)
 from layoffs_staging
 group by company
-order by 1;                         #find amount of laid off employees by each company in from highest to lowest 
+order by 1;                                       #find amount of laid off employees by each company in from highest to lowest 
 
 select company, sum(percentage_laid_off)
 from layoffs_staging
 group by company
-order by 2 desc;                   #find percentage of laid off employees by each company in from highest to lowest 
+order by 2 desc;                                  #find percentage of laid off employees by each company in from highest to lowest 
 
 
 select *
@@ -173,7 +173,7 @@ group by month;
 
 select substring(date, 1,7) as month, sum(total_laid_off) 
 from layoffs_staging
-where substring(date, 1,7) is not null    #we can't use alias here due to functions present
+where substring(date, 1,7) is not null            #we can't use alias here due to functions present
 group by month
 order by 1; 
 
